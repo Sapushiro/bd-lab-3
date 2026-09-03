@@ -1,0 +1,34 @@
+[
+  {
+    "name": "authentic banknote prediction",
+    "method": "POST",
+    "endpoint": "/predict",
+    "request": {
+      "variance": 3.6216,
+      "skewness": 8.6661,
+      "curtosis": -2.8073,
+      "entropy": -0.44699
+    },
+    "expected_status": 200,
+    "expected_response": {
+      "prediction": 0,
+      "label": "authentic"
+    }
+  },
+  {
+    "name": "forged banknote prediction",
+    "method": "POST",
+    "endpoint": "/predict",
+    "request": {
+      "variance": -2.3,
+      "skewness": -3.7,
+      "curtosis": 5.6,
+      "entropy": -0.9
+    },
+    "expected_status": 200,
+    "expected_response": {
+      "prediction": 1,
+      "label": "forged"
+    }
+  }
+]

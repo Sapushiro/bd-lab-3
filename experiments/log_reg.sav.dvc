@@ -1,0 +1,5 @@
+outs:
+- md5: 141682a5a30fa9f2a0892ec901777d9f
+  size: 866
+  hash: md5
+  path: log_reg.sav

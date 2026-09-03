@@ -1,0 +1,110 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  API_IMAGE: sapushiro/banknote-api-lab2:latest
+
+jobs:
+  functional-tests:
+    name: Run containers and functional tests
+    runs-on: ubuntu-latest
+
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install functional test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "httpx==0.28.1"
+
+      - name: Create environment file
+        env:
+          DATABASE_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+        run: |
+          {
+            echo "MSSQL_SA_PASSWORD=${DATABASE_PASSWORD}"
+            echo "DB_HOST=mssql"
+            echo "DB_PORT=1433"
+            echo "DB_NAME=banknote"
+            echo "DB_USER=sa"
+            echo "DB_PASSWORD=${DATABASE_PASSWORD}"
+            echo "API_IMAGE=${API_IMAGE}"
+          } > .env
+
+      - name: Pull Docker image
+        run: docker pull "${API_IMAGE}"
+
+      - name: Start application with Docker Compose
+        run: docker compose up -d --no-build
+
+      - name: Show container status
+        run: docker compose ps
+
+      - name: Wait for API health check
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent \
+              http://localhost:8000/health \
+              > /dev/null; then
+              echo "API is healthy"
+              exit 0
+            fi
+
+            echo "Waiting for API: attempt ${attempt}/30"
+            sleep 2
+          done
+
+          echo "API did not become healthy"
+          docker compose ps
+          docker compose logs
+          exit 1
+
+      - name: Run functional tests
+        run: |
+          set -o pipefail
+
+          python tests/run_scenario.py \
+            2>&1 | tee functional-test-results.txt
+
+          python tests/test_database.py -v \
+            2>&1 | tee -a functional-test-results.txt
+
+      - name: Upload functional test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: functional-test-results
+          path: functional-test-results.txt
+          if-no-files-found: warn
+
+      - name: Show container logs
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop application
+        if: always()
+        run: docker compose down -v

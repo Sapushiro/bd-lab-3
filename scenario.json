@@ -1,0 +1,8 @@
+{
+  "base_url": "http://localhost:8000",
+  "scenario_files": [
+    "tests/routes.json",
+    "tests/predictions.json",
+    "tests/validation.json"
+  ]
+}

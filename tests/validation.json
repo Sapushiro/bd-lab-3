@@ -1,0 +1,64 @@
+[
+  {
+    "name": "missing entropy field",
+    "method": "POST",
+    "endpoint": "/predict",
+    "request": {
+      "variance": 3.6216,
+      "skewness": 8.6661,
+      "curtosis": -2.8073
+    },
+    "expected_status": 422
+  },
+  {
+    "name": "extra field is forbidden",
+    "method": "POST",
+    "endpoint": "/predict",
+    "request": {
+      "variance": 3.6216,
+      "skewness": 8.6661,
+      "curtosis": -2.8073,
+      "entropy": -0.44699,
+      "unexpected": 123
+    },
+    "expected_status": 422
+  },
+  {
+    "name": "invalid variance type",
+    "method": "POST",
+    "endpoint": "/predict",
+    "request": {
+      "variance": "not-a-number",
+      "skewness": 8.6661,
+      "curtosis": -2.8073,
+      "entropy": -0.44699
+    },
+    "expected_status": 422
+  },
+  {
+    "name": "null feature is forbidden",
+    "method": "POST",
+    "endpoint": "/predict",
+    "request": {
+      "variance": null,
+      "skewness": 8.6661,
+      "curtosis": -2.8073,
+      "entropy": -0.44699
+    },
+    "expected_status": 422
+  },
+  {
+    "name": "empty request body",
+    "method": "POST",
+    "endpoint": "/predict",
+    "request": {},
+    "expected_status": 422
+  },
+  {
+    "name": "malformed JSON",
+    "method": "POST",
+    "endpoint": "/predict",
+    "raw_body": "{\"variance\": 1.0,}",
+    "expected_status": 422
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "name": "health check returns ok",
+    "method": "GET",
+    "endpoint": "/health",
+    "expected_status": 200,
+    "expected_response": {
+      "status": "ok"
+    }
+  },
+  {
+    "name": "unknown endpoint returns 404",
+    "method": "GET",
+    "endpoint": "/unknown",
+    "expected_status": 404
+  },
+  {
+    "name": "predict does not support GET",
+    "method": "GET",
+    "endpoint": "/predict",
+    "expected_status": 405
+  }
+]
