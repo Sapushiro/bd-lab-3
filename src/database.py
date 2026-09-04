@@ -1,9 +1,7 @@
 import os
 import re
 from datetime import datetime
-from statistics import variance
 
-from scipy.stats import entropy
 from sqlalchemy import (
     DateTime,
     Float,
@@ -17,6 +15,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+
+import hvac
 
 
 class Base(DeclarativeBase):
@@ -64,11 +64,13 @@ class Prediction(Base):
 
 class Database:
     def __init__(self) -> None:
-        self.host = os.environ["DB_HOST"]
-        self.port = int(os.environ["DB_PORT"])
-        self.database_name = os.environ["DB_NAME"]
-        self.user = os.environ["DB_USER"]
-        self.password = os.environ["DB_PASSWORD"]
+        database_config = self._get_database_config()
+
+        self.host = database_config["host"]
+        self.port = database_config["port"]
+        self.database_name = database_config["database"]
+        self.user = database_config["username"]
+        self.password = database_config["password"]
 
         if not re.fullmatch(r"[A-Za-z0-9_]+", self.database_name):
             raise ValueError(
@@ -77,6 +79,26 @@ class Database:
 
         self.master_engine = self._create_engine("master")
         self.engine = self._create_engine(self.database_name)
+
+    def _get_vault_token(self) -> str:
+        token_file = os.environ["VAULT_TOKEN_FILE"]
+
+        with open(token_file, "r") as file:
+            return file.read().strip()
+
+    def _get_database_config(self) -> dict:
+        client = hvac.Client(
+            url=os.environ["VAULT_ADDR"],
+            token=self._get_vault_token()
+        )
+
+        secret = client.secrets.kv.v2.read_secret_version(
+            path="database",
+            mount_point="secret"
+        )
+
+        return secret["data"]["data"]
+
 
     def _create_engine(self, database_name: str) -> Engine:
         connection_url = URL.create(
