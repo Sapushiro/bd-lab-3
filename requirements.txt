@@ -9,3 +9,4 @@ uvicorn==0.52.4
 httpx==0.28.1
 SQLAlchemy==2.0.43
 pyodbc==5.2.0
+hvac==2.4.0
