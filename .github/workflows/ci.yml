@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE_NAME: sapushiro/banknote-api-lab2
+  IMAGE_NAME: sapushiro/banknote-api-lab3
 
 jobs:
   build-test-push:
