@@ -48,3 +48,6 @@ Thumbs.db
 
 # Data tracked through DVC
 /data
+
+# Vault
+vault-bootstrap.env
