@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 env:
-  API_IMAGE: sapushiro/banknote-api-lab2:latest
+  API_IMAGE: sapushiro/banknote-api-lab3:latest
 
 jobs:
   functional-tests:
@@ -41,28 +41,44 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install "httpx==0.28.1"
 
-      - name: Create environment file
+      - name: Create Vault bootstrap file
         env:
-          DATABASE_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+          VAULT_ROOT_TOKEN: ${{ secrets.VAULT_ROOT_TOKEN }}
+          MSSQL_SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
         run: |
           {
-            echo "MSSQL_SA_PASSWORD=${DATABASE_PASSWORD}"
-            echo "DB_HOST=mssql"
-            echo "DB_PORT=1433"
-            echo "DB_NAME=banknote"
-            echo "DB_USER=sa"
-            echo "DB_PASSWORD=${DATABASE_PASSWORD}"
+            echo "VAULT_ROOT_TOKEN=${VAULT_ROOT_TOKEN}"
+            echo "MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}"
             echo "API_IMAGE=${API_IMAGE}"
-          } > .env
+          } > vault-bootstrap.env
 
       - name: Pull Docker image
         run: docker pull "${API_IMAGE}"
 
       - name: Start application with Docker Compose
-        run: docker compose up -d --no-build
+        run: |
+          docker compose \
+            --env-file vault-bootstrap.env \
+            up -d --no-build
 
       - name: Show container status
-        run: docker compose ps
+        run: docker compose ps -a
+
+      - name: Verify Vault
+        run: |
+          echo "Vault init logs:"
+          docker logs banknote-vault-init-container
+          
+          EXIT_CODE=$(docker inspect \
+            banknote-vault-init-container \
+            --format='{{.State.ExitCode}}')
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Vault initialization failed"
+            exit 1
+          fi
+      
+          echo "Vault initialization successful"
 
       - name: Wait for API health check
         run: |
@@ -107,4 +123,7 @@ jobs:
 
       - name: Stop application
         if: always()
-        run: docker compose down -v
+        run: |
+          docker compose \
+            --env-file vault-bootstrap.env \
+            down -v
